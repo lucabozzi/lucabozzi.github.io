@@ -10,7 +10,7 @@ let B = 0;
 let paused = false;
 let speed = 1;
 
-const ws = new WebSocket("ws://localhost:8000/ws");
+const ws = new WebSocket("wss://api.render.com/deploy/srv-d5mm7m75r7bs73d8eg9g?key=qRHZ5qVxj48/ws");
 
 ws.binaryType = "arraybuffer";
 

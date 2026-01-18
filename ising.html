@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ising Model Simulation</title>
+<style>
+  body {
+    display: flex;
+    font-family: sans-serif;
+    background: #111;
+    color: #eee;
+  }
+  #controls {
+    width: 260px;
+    padding: 10px;
+  }
+  label {
+    display: block;
+    margin-top: 10px;
+  }
+  canvas {
+    border: 1px solid #444;
+  }
+</style>
+</head>
+
+<body>
+
+<div id="controls">
+  <h2>Ising Controls</h2>
+
+  <label>T: <span id="Tval"></span></label>
+  <input type="range" min="0.1" max="5" step="0.01" value="2.3" id="T">
+
+  <label>B: <span id="Bval"></span></label>
+  <input type="range" min="-2" max="2" step="0.01" value="0" id="B">
+
+  <label>J: <span id="Jval"></span></label>
+  <input type="range" min="-2" max="2" step="0.01" value="1" id="J">
+
+  <label>Speed: <span id="Sval"></span></label>
+  <input type="range" min="0" max="2" step="0.01" value="1" id="speed">
+
+  <button id="pause">Pause</button>
+</div>
+
+<canvas id="canvas" width="800" height="800"></canvas>
+
+<script>
+/* =====================
+   PARAMETERS
+===================== */
+const N = 200;               // lattice size
+const W = 800;
+const CELL = W / N;
+
+let T = 2.3;
+let B = 0;
+let J = 1;
+let speed = 1;
+let paused = false;
+
+/* =====================
+   LATTICE
+===================== */
+let conf = new Int8Array(N * N);
+for (let i = 0; i < conf.length; i++) {
+  conf[i] = Math.random() < 0.5 ? 1 : -1;
+}
+
+const idx = (x, y) => ((x + N) % N) * N + ((y + N) % N);
+
+/* =====================
+   METROPOLIS STEP
+===================== */
+function stepMetropolis() {
+  const steps = Math.floor(speed * N * N);
+
+  for (let k = 0; k < steps; k++) {
+    const x = Math.floor(Math.random() * N);
+    const y = Math.floor(Math.random() * N);
+
+    const s = conf[idx(x, y)];
+
+    const sumN =
+      conf[idx(x+1,y)] +
+      conf[idx(x-1,y)] +
+      conf[idx(x,y+1)] +
+      conf[idx(x,y-1)];
+
+    let dE = 2 * J * s * sumN - 2 * B * s;
+
+    if (dE <= 0 || Math.random() < Math.exp(-dE / T)) {
+      conf[idx(x, y)] = -s;
+    }
+  }
+}
+
+/* =====================
+   DRAWING
+===================== */
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const img = ctx.createImageData(W, W);
+
+function draw() {
+  for (let x = 0; x < N; x++) {
+    for (let y = 0; y < N; y++) {
+      const c = conf[idx(x,y)] === 1 ? 255 : 0;
+
+      for (let i = 0; i < CELL; i++) {
+        for (let j = 0; j < CELL; j++) {
+          const px = (x * CELL + i);
+          const py = (y * CELL + j);
+          const p = 4 * (py * W + px);
+          img.data[p] = c;
+          img.data[p+1] = c;
+          img.data[p+2] = c;
+          img.data[p+3] = 255;
+        }
+      }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+/* =====================
+   UI
+===================== */
+const bind = (id, setter, label) => {
+  const el = document.getElementById(id);
+  const lab = document.getElementById(label);
+  setter(parseFloat(el.value));
+  lab.textContent = el.value;
+  el.oninput = () => {
+    setter(parseFloat(el.value));
+    lab.textContent = el.value;
+  };
+};
+
+bind("T", v => T = v, "Tval");
+bind("B", v => B = v, "Bval");
+bind("J", v => J = v, "Jval");
+bind("speed", v => speed = v, "Sval");
+
+document.getElementById("pause").onclick = () => {
+  paused = !paused;
+};
+
+/* =====================
+   MAIN LOOP
+===================== */
+function loop() {
+  if (!paused) {
+    stepMetropolis();
+    draw();
+  }
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>
